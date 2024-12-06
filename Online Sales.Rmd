@@ -1,0 +1,128 @@
+---
+title: "Online Sales"
+author: "Rahma Almira"
+date: "2024-11-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Eksplorasi data Online Sales
+
+#Set Direnctory
+```{r}
+setwd("C:/Users/LENOVO/Downloads")
+```
+
+#Load Data
+```{r}
+dat <- read.csv("online_sales_dataset.csv")
+```
+
+#Statistik Deskriptif Data
+```{r}
+library("skimr")
+summary(dat) #Statistik deskriptif data
+str(dat) #Mengenali struktur data tiap variabel 
+```
+Terdapat 44804 transaksi yang tercatat pada dataset ini. Dataset ini memiliki 17 Variabel yang terdiri dari:
+1. InvoiceNo (Nomor Transaksi)
+2. StockCode (Kode Stock)
+3. Description (Nama Produk)
+4. Quantity (Jumlah Barang yang di Beli)
+5. InvoiceDate (Tanggal Transaksi)
+6. UnitPrice (Harga Barang)
+7. CustomerID (ID Pembeli)
+8. Country (Negara Pembeli)
+9. Discount (Potongan Harga)
+10. PaymentMethod (Metode Pembayaran)
+11. ShippingCost (Biaya Pengiriman)
+12. Category (Kategori Produk)
+13. SalesChannel (Jalur Penjualan)
+14. ReturnStatus (Status Pengembalian)
+15. ShipmentProvider (Layanan Pengiriman)
+16. WarehouseLocation (Lokasi Gudang)
+17. OrderPriority (Priorotas Pembelian).
+
+
+
+#Cleaning Data
+```{r}
+colSums(is.na(dat)) #Mengidentifikasi jumlah NA pada tiap kolom/variabel
+```
+Terdapat 4978 missing value pada kolom CustomerID dan 2489 missing value pada kolom ShippingCost. Kemudian akan dilakukan penghapusan baris yang terdapat missing value pada data. 
+```{r}
+dat <- na.omit(dat) #Menghapus baris yg memiliki NA
+str(dat)
+```
+```{r}
+duplicated<- dat[duplicated(dat), ]
+print(duplicated)
+```
+Tidak terdapat duplikasi pada data. 
+
+```{r}
+#Subset data Invoice Date Tahun 2020-2023
+max(dat$InvoiceDate)
+```
+Tanggal transkasi pada data paling baru adalah 5 September 2025. Akan dilakukan subset data hanya pada transaksi yang berlangsung pada pertengahan Tahun 2024. 
+
+```{r}
+dat<-subset(dat, dat$InvoiceDate<"2024-07-01 00:00") #Subset data sebelum 2024
+max(dat$InvoiceDate)
+```
+#Ekpolrasi data : Total Pendapatan tiap Bulan
+```{r}
+dat$TotalPrice <- (dat$Quantity*dat$UnitPrice)+(dat$ShippingCost)-dat$Discount 
+head(dat)
+
+dat$InvoiceDate <- as.Date(dat$InvoiceDate, format = "%Y-%m-%d")
+
+library(dplyr)
+library(lubridate)
+revenue <- dat %>%
+  mutate(MonthDate = floor_date(InvoiceDate, "month")) %>% 
+  group_by(MonthDate) %>%
+  summarise(TotalRevenue = sum(TotalPrice))
+
+library(tidyverse)
+ggplot(revenue, aes(x = MonthDate, y = TotalRevenue)) +
+  geom_line(color = "#70c6e8", size = 0.7) +
+  geom_point(color = "#70c6e8", size = 1.2) +
+  labs(
+    title = "Total Revenue Per Month",
+    x = "Month",
+    y = "Total Revenue"
+  ) +
+  theme(plot.title = element_text(
+    hjust = 0.5,          
+    size = 16,            
+    face = "bold")) 
+```
+
+#Eksplorasi data : Top 5 Pelanggan
+```{r}
+library(janitor)
+Cust <- data.frame(dat$CustomerID,dat$TotalPrice)
+colnames(Cust)<-c("CustomerID", "TotalPrice")
+Cust5 <- Cust %>%
+  arrange(desc(TotalPrice)) %>%
+  slice_head(n = 5) 
+print(Cust5)
+```
+Dari tabel tersebut ditampilkan 5 pembeli dengan total pembelian tenbanyak. Pembeli dengan total pemeblian terbanyak adalah pembeli dengan CustomerID 93080. 
+
+
+#Eksplorasi data : Top 5 Produk paling laris
+```{r}
+#Top5 Product
+Prod <- dat %>%
+  group_by(Description) %>%
+  summarise(Total=sum(Quantity)) %>%
+  arrange(desc(Total)) %>%
+  slice_head(n = 5)
+print(Prod)
+```
+Produk yang paling laris di pasaran adalah Wall Clock.  
